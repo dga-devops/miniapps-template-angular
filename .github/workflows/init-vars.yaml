@@ -65,6 +65,8 @@ on:
         value: ${{ jobs.set.outputs.is-scan }}
       is-build:
         value: ${{ jobs.set.outputs.is-build }}
+      is-deploy:
+        value: ${{ jobs.set.outputs.is-deploy }}
 
 jobs:
   set:
@@ -98,6 +100,7 @@ jobs:
       is-test: ${{ steps.set-vars.outputs.isTest }}
       is-scan: ${{ steps.set-vars.outputs.isScan }}
       is-build: ${{ steps.set-vars.outputs.isBuild }}
+      is-deploy: ${{ steps.set-vars.outputs.isDeploy }}
 
     steps:
       - name: 📥 Install yq
@@ -243,6 +246,7 @@ jobs:
           echo "isTest=$isTest" >> $GITHUB_OUTPUT
           echo "isScan=$isScan" >> $GITHUB_OUTPUT
           echo "isBuild=$isBuild" >> $GITHUB_OUTPUT
+          echo "isDeploy=$isDeploy" >> $GITHUB_OUTPUT
 
       - name: 📋 Summary
         run: |
@@ -294,3 +298,4 @@ jobs:
           echo "  🧪 Is Test             : ${{ steps.set-vars.outputs.isTest }}"
           echo "  🔍 Is Scan             : ${{ steps.set-vars.outputs.isScan }}"
           echo "  🔁 Is Build            : ${{ steps.set-vars.outputs.isBuild }}"
+          echo "  🏗️ Is Deploy           : ${{ steps.set-vars.outputs.isDeploy }}"
