@@ -63,6 +63,8 @@ on:
         value: ${{ jobs.set.outputs.is-test }}
       is-scan:
         value: ${{ jobs.set.outputs.is-scan }}
+      is-build:
+        value: ${{ jobs.set.outputs.is-build }}
 
 jobs:
   set:
@@ -95,6 +97,7 @@ jobs:
       path-pattern: ${{ steps.set-vars.outputs.pathPattern }}
       is-test: ${{ steps.set-vars.outputs.isTest }}
       is-scan: ${{ steps.set-vars.outputs.isScan }}
+      is-build: ${{ steps.set-vars.outputs.isBuild }}
 
     steps:
       - name: 📥 Install yq
@@ -118,7 +121,7 @@ jobs:
           imageTag=unknown-${shortCommit}
           buildSpec="Dockerfile"
           buildEnv="develop"
-
+          isBuild=true
           if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
             if [[ "$GITHUB_BASE_REF" == "develop" ]]; then
               environment="dev"
@@ -128,9 +131,13 @@ jobs:
               imageTag=uat-${shortCommit}
             fi
             isPullRequest=true
+            isBuild=false
             if [[ "$GITHUB_EVENT_ACTION" == "closed" ]]; then
               merged=$(jq -r '.pull_request.merged' "$GITHUB_EVENT_PATH")
-              [[ "$merged" == "true" ]] && isMerge=true
+              if [[ "$merged" == "true" ]]; then
+                isMerge=true
+                isBuild=true
+              fi
             fi
 
           elif [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
@@ -235,6 +242,7 @@ jobs:
           echo "pathPattern=$pathPattern" >> $GITHUB_OUTPUT
           echo "isTest=$isTest" >> $GITHUB_OUTPUT
           echo "isScan=$isScan" >> $GITHUB_OUTPUT
+          echo "isBuild=$isBuild" >> $GITHUB_OUTPUT
 
       - name: 📋 Summary
         run: |
@@ -285,3 +293,4 @@ jobs:
           echo "🔁 Workflow Switches"
           echo "  🧪 Is Test             : ${{ steps.set-vars.outputs.isTest }}"
           echo "  🔍 Is Scan             : ${{ steps.set-vars.outputs.isScan }}"
+          echo "  🔁 Is Build            : ${{ steps.set-vars.outputs.isBuild }}"
