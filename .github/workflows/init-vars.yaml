@@ -203,9 +203,9 @@ jobs:
           containerName=${name}-${environment}
 
           isTest=false
-          [[ "$runUnitTest" == "true" && "$isMerge" == "false" && "$isTag" == "false" && "$isDeploy" == "false" ]] && isTest=true
+          [[ "$runUnitTest" == "true" && "$isMerge" == "false" && "$isTag" == "false" && "$isDeploy" == "false" ]] && isTest="true"
           isScan=false
-          [[ "$runSonar" == "true" && "$isMerge" == "false" && "$isTag" == "true" && "$isDeploy" == "false" ]] && isScan=true
+          [[ "$runSonar" == "true" && "$isMerge" == "false" && "$isTag" == "true" && "$isDeploy" == "false" ]] && isScan="true"
 
           echo "environment=$environment" >> $GITHUB_OUTPUT
           echo "isPullRequest=$isPullRequest" >> $GITHUB_OUTPUT
