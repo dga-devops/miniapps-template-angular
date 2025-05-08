@@ -39,7 +39,7 @@ jobs:
   scan:
     name: 🔸 Scan
     needs: [ initial, test ]
-    if: ${{ always() && (needs.initial.outputs.is-scan == 'true') && (needs.initial.outputs.ignore-unit-test-error == 'true' || needs.test.result == 'skipped' || needs.test.result == 'success') }}
+    if:  ${{ needs.initial.outputs.is-scan == 'true' }}
     uses: ./.github/workflows/sonar-scan-angular.yaml
     with:
       ignore-sonar-quality: ${{ needs.initial.outputs.ignore-sonar-quality == 'true' }}
