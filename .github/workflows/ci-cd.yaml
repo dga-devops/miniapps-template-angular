@@ -36,10 +36,25 @@ jobs:
       test-image-name: ${{ needs.initial.outputs.test-image-name }}
       test-image-tag: ${{ needs.initial.outputs.test-image-tag }}
 
+  debug-test:
+    name: 🔸 Debug Test
+    needs: [ initial, test ]
+    if: ${{ always() }}
+    runs-on: self-hosted
+    steps:
+      - name: Debug Test
+        run: |
+          echo "Test failed. Please check the logs for details."
+          echo "Test result: ${{ needs.test.result }}"
+          echo "Is Test: ${{ needs.initial.outputs.is-test }}"
+          echo "Is Scan: ${{ needs.initial.outputs.is-scan }}"
+          echo "${{ (needs.initial.outputs.is-scan != 'false') }}"
+          echo "${{ (needs.initial.outputs.ignore-unit-test-error == 'true' || needs.test.result == 'skipped' || needs.test.result == 'success') }}"
+
   scan:
     name: 🔸 Scan
     needs: [ initial, test ]
-    if:  ${{ needs.initial.outputs.is-scan == 'true' }}
+    if: ${{ always() &&  (needs.initial.outputs.is-scan != 'false') && (needs.initial.outputs.ignore-unit-test-error == 'true' || needs.test.result == 'skipped' || needs.test.result == 'success') }}
     uses: ./.github/workflows/sonar-scan-angular.yaml
     with:
       ignore-sonar-quality: ${{ needs.initial.outputs.ignore-sonar-quality == 'true' }}
