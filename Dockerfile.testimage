@@ -10,6 +10,6 @@ RUN apt-get update \
     && npm install -g pnpm @angular/cli
 
 
-COPY ./source/ .
+ADD source .
 
-RUN npm ci
+RUN npm install -g npm && npm ci
