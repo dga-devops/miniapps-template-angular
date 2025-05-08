@@ -52,7 +52,7 @@ jobs:
   build-push:
     name: 📦🚀 Build & Push
     needs: [ initial, test, scan ]
-    if: ${{ always() && (needs.test.result == 'skipped'|| needs.scan.result == 'success' || needs.initial.outputs.ignore-sonar-quality == 'true') }}
+    if: ${{ always() && (needs.test.result == 'skipped'|| needs.scan.result == 'success' || needs.initial.outputs.ignore-sonar-quality == 'true') && (needs.test.result != 'failure' ) }}
     uses: ./.github/workflows/build-push.yaml
     with:
       aws-region: ${{ needs.initial.outputs.aws-region }}
