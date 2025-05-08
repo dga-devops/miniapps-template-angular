@@ -36,7 +36,8 @@ describe('AppComponent', () => {
   it('should render name', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h2')?.textContent).toContain('Hello, localhost');
+    const element = fixture.nativeElement.querySelector('#name');
+    expect(element).not.toBeNull();
+    expect(element.textContent).toBe('Environment, localhost');
   });
 });
