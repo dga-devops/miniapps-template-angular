@@ -17,7 +17,11 @@ build-image:
 	docker push $(REGISTRY)/$(NAME):latest
 
 run-test:
-	docker run -it --rm $(REGISTRY)/$(NAME):testimage-latest /bin/bash
+	docker run -it --rm \
+  		-v $(shell pwd)/coverage:/usr/src/app/coverage \
+		-v $(shell pwd)/source:/usr/src/app \
+		--workdir /usr/src/app \
+ 		$(REGISTRY)/$(NAME):testimage-latest /bin/bash
 
 run:
 	docker run -it --rm -p 4200:4200 $(REGISTRY)/$(NAME):latest

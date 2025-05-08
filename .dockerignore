@@ -5,3 +5,5 @@ source/coverage
 source/.angular
 source/.vscode
 .git
+.env
+coverage
