@@ -210,6 +210,7 @@ jobs:
           echo "environment=$environment" >> $GITHUB_OUTPUT
           echo "isPullRequest=$isPullRequest" >> $GITHUB_OUTPUT
           echo "isMerge=$isMerge" >> $GITHUB_OUTPUT
+          echo "isTag=$isTag" >> $GITHUB_OUTPUT
           echo "imageName=$imageName" >> $GITHUB_OUTPUT
           echo "imageTag=$imageTag" >> $GITHUB_OUTPUT
           echo "buildSpec=$buildSpec" >> $GITHUB_OUTPUT
@@ -234,3 +235,53 @@ jobs:
           echo "pathPattern=$pathPattern" >> $GITHUB_OUTPUT
           echo "isTest=$isTest" >> $GITHUB_OUTPUT
           echo "isScan=$isScan" >> $GITHUB_OUTPUT
+
+      - name: 📋 Summary
+        run: |
+          echo "🔧 Environment Info"
+          echo "  🏷️ Environment        : ${{ steps.set-vars.outputs.environment }}"
+          echo "  🔁 Is Pull Request    : ${{ steps.set-vars.outputs.isPullRequest }}"
+          echo "  🔀 Is Merge           : ${{ steps.set-vars.outputs.isMerge }}"
+          echo "  🏷️ Is Tag             : ${{ steps.set-vars.outputs.isTag }}"
+          
+          echo ""
+          echo "🧪 Unit Test Config"
+          echo "  ✅ Run Unit Test       : ${{ steps.set-vars.outputs.runUnitTest }}"
+          echo "  🚫 Ignore Test Error   : ${{ steps.set-vars.outputs.ignoreUnitTestError }}"
+          echo "  🐳 Test Image Name     : ${{ steps.set-vars.outputs.testImageName }}"
+          echo "  🏷️ Test Image Tag      : ${{ steps.set-vars.outputs.testImageTag }}"
+          
+          echo ""
+          echo "🔍 SonarQube Scan"
+          echo "  📦 Run Sonar           : ${{ steps.set-vars.outputs.runSonar }}"
+          echo "  🚫 Ignore Quality      : ${{ steps.set-vars.outputs.ignoreSonarQuality }}"
+          echo "  🗝️ Project Key         : ${{ steps.set-vars.outputs.sonarProjectKey }}"
+          echo "  🌐 Host URL            : ${{ steps.set-vars.outputs.sonarHostUrl }}"
+          echo "  📁 Scan Target         : ${{ steps.set-vars.outputs.sonarScanSourceCodeTarget }}"
+          
+          echo ""
+          echo "📦 Build & Push Info"
+          echo "  🐳 Image Name          : ${{ steps.set-vars.outputs.imageName }}"
+          echo "  🏷️ Image Tag           : ${{ steps.set-vars.outputs.imageTag }}"
+          echo "  📝 Build Spec          : ${{ steps.set-vars.outputs.buildSpec }}"
+          echo "  🌱 Build Env           : ${{ steps.set-vars.outputs.buildEnv }}"
+          
+          echo ""
+          echo "☁️ AWS Deployment"
+          echo "  🌍 AWS Region          : ${{ steps.set-vars.outputs.awsRegion }}"
+          echo "  🔐 Role to Assume      : ${{ steps.set-vars.outputs.awsRoleToAssume }}"
+          echo "  📦 Cluster Name        : ${{ steps.set-vars.outputs.clusterName }}"
+          echo "  🛠️ Service Name        : ${{ steps.set-vars.outputs.serviceName }}"
+          echo "  🧩 Task Definition     : ${{ steps.set-vars.outputs.taskDefinition }}"
+          echo "  📦 Container Name      : ${{ steps.set-vars.outputs.containerName }}"
+          
+          echo ""
+          echo "🌐 Domain Routing"
+          echo "  🌐 Domain              : ${{ steps.set-vars.outputs.domain }}"
+          echo "  🧭 Sub Domain          : ${{ steps.set-vars.outputs.subDomain }}"
+          echo "  🚏 Path Pattern        : ${{ steps.set-vars.outputs.pathPattern }}"
+          
+          echo ""
+          echo "🔁 Workflow Switches"
+          echo "  🧪 Is Test             : ${{ steps.set-vars.outputs.isTest }}"
+          echo "  🔍 Is Scan             : ${{ steps.set-vars.outputs.isScan }}"
