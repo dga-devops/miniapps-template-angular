@@ -14,6 +14,10 @@ on:
     branches:
       - develop
       - main
+    tags:
+      - v*
+      - baseimage-v*
+      - testimage-v*
 
 permissions:
   id-token: write
@@ -67,7 +71,7 @@ jobs:
   deploy:
     name: 🔸 Deploy
     needs: [ initial, build-push ]
-    if: ${{ always() }}
+    if: ${{ always() && (needs.initial.outputs.is-deploy == 'true' || needs.build-push.result == 'skipped') }}
     uses: ./.github/workflows/deploy.yaml
     with:
       aws-region: ${{ needs.initial.outputs.aws-region }}
