@@ -65,8 +65,9 @@ jobs:
             -Dsonar.host.url=${{ inputs.sonar-host-url }}
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.sources=${{ inputs.source-code-directory }}
-            -Dsonar.exclusions=**/assets/**,**/helm/**,**/.idea/**,**/coverage/**,**/test-helpers/**,**/node_modules/**,**/.angular/**,**/results/**
-            -Dsonar.test.inclusions=**/*.spec.ts,**/*.test.ts
+            -Dsonar.tests=${{ inputs.source-code-directory }}
+            -Dsonar.exclusions=**/assets/**,**/helm/**,**/.idea/**,**/coverage/**,**/test-helpers/**,**/node_modules/**,**/.angular/**,**/public/**,**/results/**
+            -Dsonar.test.inclusions=**/*.spec.ts
             ${{ steps.check-coverage.outputs.has-coverage == 'true' && '-Dsonar.javascript.lcov.reportPaths=results/lcov.info' || '' }}
 
       - name: ✅ Check SonarQube Quality Gate
