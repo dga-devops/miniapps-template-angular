@@ -76,10 +76,10 @@ jobs:
             echo "❌ ERROR: Source directory not found: $SRC_DIR"
             exit 1
           fi
-
+          ls -la "$SRC_DIR"
           docker run --rm \
-            -v "$SRC_DIR:/usr/src/app" \
-            -v "$COVERAGE_DIR:/usr/src/app/coverage" \
+            -v ${SRC_DIR}:/usr/src/app \
+            -v $COVERAGE_DIR:/usr/src/app/coverage \
             --workdir /usr/src/app \
             "$IMAGE" /bin/bash -c "npm run test:ci"
 

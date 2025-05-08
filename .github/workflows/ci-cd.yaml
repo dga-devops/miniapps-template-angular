@@ -51,7 +51,7 @@ jobs:
 
   build-push:
     name: 📦🚀 Build & Push
-    needs: [ initial, scan ]
+    needs: [ initial, test, scan ]
     if: ${{ always() && (needs.test.result == 'skipped'|| needs.scan.result == 'success' || needs.initial.outputs.ignore-sonar-quality == 'true') }}
     uses: ./.github/workflows/build-push.yaml
     with:
