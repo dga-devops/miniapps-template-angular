@@ -36,7 +36,7 @@ module.exports = function (config) {
       }
     },
     coverageReporter: {
-      dir: require('path').join(__dirname, './coverage/results'),
+      dir: require('path').join(__dirname, './coverage'),
       subdir: '.',
       reporters: [
         {type: 'lcov'},
@@ -44,7 +44,7 @@ module.exports = function (config) {
       ]
     },
     reporters: ['progress', 'kjhtml'],
-    browsers: ['Chrome', 'ChromeHeadless'],
+    browsers: ['ChromeHeadless'],
     restartOnFileChange: true
   });
 };

@@ -46,9 +46,9 @@ jobs:
       - name: 📂 Check for lcov.info
         id: check-coverage
         run: |
-          if [[ -f results/lcov.info ]]; then
+          if [[ -f coverage/lcov.info ]]; then
             echo "has-coverage=true" >> $GITHUB_OUTPUT
-            echo "✅ Found coverage file: results/lcov.info"
+            echo "✅ Found coverage file: coverage/lcov.info"
           else
             echo "has-coverage=false" >> $GITHUB_OUTPUT
             echo "⚠️ Coverage file not found. Sonar will scan without coverage."
@@ -68,7 +68,7 @@ jobs:
             -Dsonar.tests=${{ inputs.source-code-directory }}
             -Dsonar.exclusions=**/assets/**,**/helm/**,**/.idea/**,**/coverage/**,**/test-helpers/**,**/node_modules/**,**/.angular/**,**/public/**,**/results/**
             -Dsonar.test.inclusions=**/*.spec.ts
-            ${{ steps.check-coverage.outputs.has-coverage == 'true' && '-Dsonar.javascript.lcov.reportPaths=results/lcov.info' || '' }}
+            ${{ steps.check-coverage.outputs.has-coverage == 'true' && '-Dsonar.javascript.lcov.reportPaths=coverage/lcov.info' || '' }}
 
       - name: ✅ Check SonarQube Quality Gate
         if: ${{ !inputs.ignore-sonar-quality }}

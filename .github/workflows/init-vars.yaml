@@ -70,6 +70,7 @@ on:
 
 jobs:
   set:
+    timeout-minutes: 5
     runs-on: self-hosted
     outputs:
       environment: ${{ steps.set-vars.outputs.environment }}
@@ -113,144 +114,114 @@ jobs:
         id: set-vars
         shell: bash
         run: |
-          shortCommit="${GITHUB_SHA::7}"
-          configPath="${{ inputs.config-path }}"
+          set -euo pipefail
 
-          environment=unknown
-          isPullRequest=false
-          isMerge=false
-          isTag=false
-          isDeploy=false
-          imageTag=unknown-${shortCommit}
+          echo "🔍 Loading config: ${{ inputs.config-path }}"
+          configPath="${{ inputs.config-path }}"
+          if [[ ! -f "$configPath" ]]; then
+            echo "❌ Config file not found: $configPath"
+            exit 1
+          fi
+
+          # Short commit ref
+          shortCommit="${GITHUB_SHA::7}"
+
+          # Init default values
+          environment="unknown"
+          isPullRequest="false"
+          isMerge="false"
+          isTag="false"
+          isDeploy="false"
+          imageTag="unknown-${shortCommit}"
           buildSpec="Dockerfile"
           buildEnv="develop"
-          isBuild=true
+          isBuild="true"
+
           if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
-            if [[ "$GITHUB_BASE_REF" == "develop" ]]; then
-              environment="dev"
-              imageTag=dev-${shortCommit}
-            elif [[ "$GITHUB_BASE_REF" == "main" ]]; then
-              environment="uat"
-              imageTag=uat-${shortCommit}
-            fi
-            isPullRequest=true
-            isBuild=false
+            case "$GITHUB_BASE_REF" in
+              "develop") environment="dev"; imageTag="dev-${shortCommit}" ;;
+              "main")    environment="uat"; imageTag="uat-${shortCommit}" ;;
+            esac
+            isPullRequest="true"
+            isBuild="false"
             if [[ "$GITHUB_EVENT_ACTION" == "closed" ]]; then
-              merged=$(jq -r '.pull_request.merged' "$GITHUB_EVENT_PATH")
-              if [[ "$merged" == "true" ]]; then
-                isMerge=true
-                isBuild=true
-                isDeploy=true
-          
+              if [[ "$(jq -r '.pull_request.merged' "$GITHUB_EVENT_PATH")" == "true" ]]; then
+                isMerge="true"
+                isBuild="true"
+                isDeploy="true"
               fi
             fi
 
           elif [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
             if [[ "$GITHUB_REF" == refs/heads/develop ]]; then
-              environment=dev
-              buildEnv=develop
-              imageTag=dev-${shortCommit}
-              isDeploy=true
-
+              environment="dev"; buildEnv="develop"; imageTag="dev-${shortCommit}"; isDeploy="true"
             elif [[ "$GITHUB_REF" == refs/heads/main ]]; then
-              environment=uat
-              buildEnv=uat
-              imageTag=uat-${shortCommit}
-              isDeploy=true
-
+              environment="uat"; buildEnv="uat"; imageTag="uat-${shortCommit}"; isDeploy="true"
             elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
               tagName="${GITHUB_REF#refs/tags/}"
-              isTag=true
-              if [[ "$tagName" == baseimage-* ]]; then
-                environment=baseimage
-                buildEnv=base
-                imageTag=$tagName
-                buildSpec="Dockerfile.baseimage"
-              elif [[ "$tagName" == testimage-* ]]; then
-                environment=testimage
-                buildEnv=test
-                imageTag=$tagName
-                buildSpec="Dockerfile.testimage"
-              elif [[ "$tagName" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-                environment=prod
-                buildEnv=production
-                imageTag=${tagName}
-              else
-                environment="dev"
-                buildEnv="develop"
-                imageTag="dev-${tagName}"
-              fi
+              isTag="true"
+              case "$tagName" in
+                baseimage-*)  environment="baseimage"; buildEnv="base"; buildSpec="Dockerfile.baseimage"; imageTag="$tagName" ;;
+                testimage-*)  environment="testimage"; buildEnv="test"; buildSpec="Dockerfile.testimage"; imageTag="$tagName" ;;
+                v[0-9]*.[0-9]*.[0-9]*) environment="prod"; buildEnv="production"; imageTag="$tagName" ;;
+                *) environment="dev"; buildEnv="develop"; imageTag="dev-${tagName}" ;;
+              esac
             else
               refName="${GITHUB_REF#refs/heads/}"
-              environment=feature
-              buildEnv=develop
-              imageTag=feature-${shortCommit}-${refName//\//-}
+              environment="feature"
+              buildEnv="develop"
+              imageTag="feature-${shortCommit}-${refName//\//-}"
             fi
 
           elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
-            isDeploy=true
-            environment=${{ github.event.inputs.environment }}
-            imageTag=${{ github.event.inputs.image-tag }}
+            isDeploy="true"
+            environment="${{ github.event.inputs.environment }}"
+            imageTag="${{ github.event.inputs.image-tag }}"
           fi
 
-          # Load config
-          imageName=$(yq '.env.IMAGE_NAME' "$configPath"| xargs)
-          runUnitTest=$(yq '.env.RUN_UNIT_TEST' "$configPath"| xargs)
-          ignoreUnitTestError=$(yq '.env.IGNORE_UNIT_TEST_ERROR' "$configPath"| xargs)
-          testImageName=$(yq '.env.TEST_IMAGE_NAME' "$configPath"| xargs)
-          testImageTag=$(yq '.env.TEST_IMAGE_TAG' "$configPath"| xargs)
-          runSonar=$(yq '.env.RUN_SONAR' "$configPath"| xargs)
-          ignoreSonarQuality=$(yq '.env.IGNORE_SONAR_QUALITY' "$configPath"| xargs)
-          sonarProjectKey=$(yq '.env.SONAR_PROJECT_KEY' "$configPath"| xargs)
-          sonarHostUrl=$(yq '.env.SONAR_HOST_URL' "$configPath"| xargs)
-          sonarScanSourceCodeTarget=$(yq '.env.SONAR_SCAN_SOURCE_CODE_TARGET' "$configPath"| xargs)
-          name=$(yq '.env.NAME' "$configPath"| xargs)
-          awsRegion=$(yq '.env.AWS_REGION' "$configPath"| xargs)
-          awsRoleToAssume=$(yq '.env.AWS_ROLE_TO_ASSUME' "$configPath"| xargs)
-          domain=$(yq '.env.DOMAIN' "$configPath"| xargs)
-          subDomain=$(yq '.env.SUB_DOMAIN' "$configPath"| xargs)
-          pathPattern=$(yq '.env.PATH_PATTERN' "$configPath"| xargs)
+          # Read from config
+          read_yaml() { yq ".$1" "$configPath" | tr -d '"' | tr '[:upper:]' '[:lower:]' | xargs; }
 
-          clusterName=miniapps-cluster-${environment}
-          serviceName=${name}-${environment}
-          taskDefinition=${name}-${environment}
-          containerName=${name}-${environment}
+          imageName=$(read_yaml "env.IMAGE_NAME")
+          runUnitTest=$(read_yaml "env.RUN_UNIT_TEST")
+          ignoreUnitTestError=$(read_yaml "env.IGNORE_UNIT_TEST_ERROR")
+          testImageName=$(read_yaml "env.TEST_IMAGE_NAME")
+          testImageTag=$(read_yaml "env.TEST_IMAGE_TAG")
+          runSonar=$(read_yaml "env.RUN_SONAR")
+          ignoreSonarQuality=$(read_yaml "env.IGNORE_SONAR_QUALITY")
+          sonarProjectKey=$(read_yaml "env.SONAR_PROJECT_KEY")
+          sonarHostUrl=$(read_yaml "env.SONAR_HOST_URL")
+          sonarScanSourceCodeTarget=$(read_yaml "env.SONAR_SCAN_SOURCE_CODE_TARGET")
+          name=$(read_yaml "env.NAME")
+          awsRegion=$(read_yaml "env.AWS_REGION")
+          awsRoleToAssume=$(read_yaml "env.AWS_ROLE_TO_ASSUME")
+          domain=$(read_yaml "env.DOMAIN")
+          subDomain=$(read_yaml "env.SUB_DOMAIN")
+          pathPattern=$(read_yaml "env.PATH_PATTERN")
 
-          isTest=false
-          [[ "$runUnitTest" == "true" && "$isMerge" == "false" && "$isTag" == "false" ]] && isTest="true"
-          isScan=false
-          [[ "$runSonar" == "true" && "$isMerge" == "false" && "$isTag" == "false" ]] && isScan="true"
+          # Validate required values
+          [[ -z "$imageName" || -z "$awsRoleToAssume" || -z "$name" ]] && {
+            echo "❌ Required config missing (IMAGE_NAME, AWS_ROLE_TO_ASSUME, NAME)"
+            exit 1
+          }
 
-          echo "environment=$environment" >> $GITHUB_OUTPUT
-          echo "isPullRequest=$isPullRequest" >> $GITHUB_OUTPUT
-          echo "isMerge=$isMerge" >> $GITHUB_OUTPUT
-          echo "isTag=$isTag" >> $GITHUB_OUTPUT
-          echo "imageName=$imageName" >> $GITHUB_OUTPUT
-          echo "imageTag=$imageTag" >> $GITHUB_OUTPUT
-          echo "buildSpec=$buildSpec" >> $GITHUB_OUTPUT
-          echo "buildEnv=$buildEnv" >> $GITHUB_OUTPUT
-          echo "runUnitTest=$runUnitTest" >> $GITHUB_OUTPUT
-          echo "ignoreUnitTestError=$ignoreUnitTestError" >> $GITHUB_OUTPUT
-          echo "testImageName=$testImageName" >> $GITHUB_OUTPUT
-          echo "testImageTag=$testImageTag" >> $GITHUB_OUTPUT
-          echo "runSonar=$runSonar" >> $GITHUB_OUTPUT
-          echo "ignoreSonarQuality=$ignoreSonarQuality" >> $GITHUB_OUTPUT
-          echo "sonarProjectKey=$sonarProjectKey" >> $GITHUB_OUTPUT
-          echo "sonarHostUrl=$sonarHostUrl" >> $GITHUB_OUTPUT
-          echo "sonarScanSourceCodeTarget=$sonarScanSourceCodeTarget" >> $GITHUB_OUTPUT
-          echo "awsRegion=$awsRegion" >> $GITHUB_OUTPUT
-          echo "awsRoleToAssume=$awsRoleToAssume" >> $GITHUB_OUTPUT
-          echo "clusterName=$clusterName" >> $GITHUB_OUTPUT
-          echo "serviceName=$serviceName" >> $GITHUB_OUTPUT
-          echo "taskDefinition=$taskDefinition" >> $GITHUB_OUTPUT
-          echo "containerName=$containerName" >> $GITHUB_OUTPUT
-          echo "domain=$domain" >> $GITHUB_OUTPUT
-          echo "subDomain=$subDomain" >> $GITHUB_OUTPUT
-          echo "pathPattern=$pathPattern" >> $GITHUB_OUTPUT
-          echo "isTest=$isTest" >> $GITHUB_OUTPUT
-          echo "isScan=$isScan" >> $GITHUB_OUTPUT
-          echo "isBuild=$isBuild" >> $GITHUB_OUTPUT
-          echo "isDeploy=$isDeploy" >> $GITHUB_OUTPUT
+          clusterName="miniapps-cluster-${environment}"
+          serviceName="${name}-${environment}"
+          taskDefinition="${name}-${environment}"
+          containerName="${name}-${environment}"
+
+          [[ "$runUnitTest" == "true" && "$isMerge" == "false" && "$isTag" == "false" ]] && isTest="true" || isTest="false"
+          [[ "$runSonar" == "true" && "$isMerge" == "false" && "$isTag" == "false" ]] && isScan="true" || isScan="false"
+
+          # Output all
+          for var in \
+            environment isPullRequest isMerge isTag isDeploy isBuild isTest isScan \
+            imageName imageTag buildSpec buildEnv runUnitTest ignoreUnitTestError \
+            testImageName testImageTag runSonar ignoreSonarQuality sonarProjectKey sonarHostUrl sonarScanSourceCodeTarget \
+            awsRegion awsRoleToAssume clusterName serviceName taskDefinition containerName domain subDomain pathPattern
+          do
+            echo "$var=${!var}" >> "$GITHUB_OUTPUT"
+          done
 
       - name: 📋 Summary
         run: |

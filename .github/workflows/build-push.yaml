@@ -23,10 +23,22 @@ on:
         required: false
         type: string
 
+    outputs:
+      tagged-image:
+        description: 'Tagged image with specific version'
+        value: ${{ jobs.build-push.outputs.tagged-image }}
+      latest-image:
+        description: 'Tagged image as latest variant'
+        value: ${{ jobs.build-push.outputs.latest-image }}
+
 jobs:
   build-push:
     runs-on: self-hosted
     timeout-minutes: 10
+
+    outputs:
+      tagged-image: ${{ steps.buildx.outputs.taggedImage }}
+      latest-image: ${{ steps.buildx.outputs.latestImage }}
 
     steps:
       - name: 📋 Log Inputs
@@ -69,12 +81,15 @@ jobs:
       - name: 🏗️ Build and Push with Buildx
         id: buildx
         run: |
-          REGISTRY=${{ steps.ecr.outputs.registry }}
+          set -euo pipefail
+
+          REGISTRY="${{ steps.ecr.outputs.registry }}"
           IMAGE_NAME="${{ inputs.image-name }}"
           IMAGE_TAG="${{ inputs.image-tag }}"
           DOCKERFILE="${{ inputs.build-spec }}"
+          INPUT_BUILD_ARGS="${{ inputs.build-args }}"
 
-          # Determine latest tag
+          # Determine latest tag variant
           if [[ "$DOCKERFILE" == *.baseimage ]]; then
             LATEST_TAG="baseimage-latest"
           elif [[ "$DOCKERFILE" == *.testimage ]]; then
@@ -83,16 +98,17 @@ jobs:
             LATEST_TAG="latest"
           fi
 
-          # Convert array of build args
-          INPUT_BUILD_ARGS="${{ inputs.build-args }}"
-          read -ra ARR <<< "$INPUT_BUILD_ARGS"        
+          # Safely parse build args
           BUILD_ARGS=""
-          for arg in "${ARR[@]}"; do
-            BUILD_ARGS+="--build-arg $arg "
-          done
- 
+          if [[ -n "$INPUT_BUILD_ARGS" ]]; then
+            read -ra ARG_ARRAY <<< "$INPUT_BUILD_ARGS"
+            for arg in "${ARG_ARRAY[@]}"; do
+              BUILD_ARGS+="--build-arg $arg "
+            done
+          fi
 
-          echo "⏳ Building $REGISTRY/$IMAGE_NAME:$IMAGE_TAG with $DOCKERFILE"
+          echo "⏳ Building $REGISTRY/$IMAGE_NAME:$IMAGE_TAG from $DOCKERFILE"
+
           docker buildx build \
             --file "$DOCKERFILE" \
             $BUILD_ARGS \
@@ -100,16 +116,16 @@ jobs:
             --tag "$REGISTRY/$IMAGE_NAME:$LATEST_TAG" \
             --cache-from type=local,src=/tmp/.buildx-cache \
             --cache-to type=local,dest=/tmp/.buildx-cache-new \
-            --push \
-            .
+            --push .
 
+          # Rotate cache
           rm -rf /tmp/.buildx-cache
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
-          echo "imageNameTag=$REGISTRY/$IMAGE_NAME:$IMAGE_TAG" >> $GITHUB_OUTPUT
-          echo "imageNameTagLatest=$REGISTRY/$IMAGE_NAME:$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "taggedImage=$REGISTRY/$IMAGE_NAME:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "latestImage=$REGISTRY/$IMAGE_NAME:$LATEST_TAG" >> $GITHUB_OUTPUT
 
       - name: ✅ Summary
         run: |
-          echo "::notice::Pushed: ${{ steps.buildx.outputs.imageNameTag }}"
-          echo "::notice::Latest: ${{ steps.buildx.outputs.imageNameTagLatest }}"
+          echo "::notice::Tagged  : ${{ steps.buildx.outputs.taggedImage }}"
+          echo "::notice::Latest  : ${{ steps.buildx.outputs.latestImage }}"

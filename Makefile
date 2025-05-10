@@ -19,9 +19,8 @@ build-image:
 run-test:
 	docker run -it --rm \
   		-v $(shell pwd)/coverage:/usr/src/app/coverage \
-		-v $(shell pwd)/source:/usr/src/app \
-		--workdir /usr/src/app \
- 		$(REGISTRY)/$(NAME):testimage-latest /bin/bash
+		-v $(shell pwd)/source/src:/usr/src/app/src \
+ 		$(REGISTRY)/$(NAME):testimage-latest /bin/bash -c "npm run test:ci"
 
 run:
 	docker run -it --rm -p 4200:4200 $(REGISTRY)/$(NAME):latest

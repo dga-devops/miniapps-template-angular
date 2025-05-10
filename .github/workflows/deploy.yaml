@@ -37,6 +37,7 @@ jobs:
       - name: 📋 Log Inputs
         id: log-inputs
         run: |
+          set -euo pipefail
           echo "AWS Region        : ${{ inputs.aws-region }}"
           echo "Role to Assume    : ${{ inputs.aws-role-to-assume }}"
           echo "Image Name        : ${{ inputs.image-name }}"
@@ -45,9 +46,9 @@ jobs:
           echo "Service Name      : ${{ inputs.service-name }}"
           echo "Task Definition   : ${{ inputs.task-definition }}"
           echo "Container Name    : ${{ inputs.container-name }}"
-          
-          echo "region=$(echo '${{ inputs.aws-region }}' | xargs)" >> $GITHUB_OUTPUT
-          echo "role=$(echo '${{ inputs.aws-role-to-assume }}' | xargs)" >> $GITHUB_OUTPUT      
+
+          echo "region=$(echo '${{ inputs.aws-region }}' | xargs)" >> "$GITHUB_OUTPUT"
+          echo "role=$(echo '${{ inputs.aws-role-to-assume }}' | xargs)" >> "$GITHUB_OUTPUT"
 
       - name: 🔐 Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -55,24 +56,32 @@ jobs:
           role-to-assume: ${{ steps.log-inputs.outputs.role }}
           aws-region: ${{ steps.log-inputs.outputs.region }}
 
-      - name: 🔐 Amazon ECR Login
+      - name: 🔐 Login to Amazon ECR
         id: ecr-login
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: 🔍 Verify Image Exists in Amazon ECR
         run: |
+          set -euo pipefail
           registry=${{ steps.ecr-login.outputs.registry }}
-          image="${registry}/${{ inputs.image-name }}:${{ inputs.image-tag }}"
-          echo "Verifying ECR image: $image"
+          repository="${{ inputs.image-name }}"
+          tag="${{ inputs.image-tag }}"
+          echo "🔍 Verifying image: $registry/$repository:$tag"
 
-          aws ecr describe-images --repository-name "${{ inputs.image-name }}" \
-            --image-ids imageTag="${{ inputs.image-tag }}" > /dev/null \
-            || { echo "❌ Image tag not found."; exit 1; }
+          # Check repository exists
+          aws ecr describe-repositories --repository-names "$repository" > /dev/null \
+            || { echo "❌ Repository '$repository' not found."; exit 1; }
+
+          # Check image tag exists
+          aws ecr describe-images --repository-name "$repository" \
+            --image-ids imageTag="$tag" > /dev/null \
+            || { echo "❌ Image tag '$tag' not found in repository '$repository'."; exit 1; }
 
       - name: 📥 Download Current Task Definition
         id: download-task
         run: |
-          name=${{ inputs.task-definition }}
+          set -euo pipefail
+          name="${{ inputs.task-definition }}"
           aws ecs describe-task-definition \
             --task-definition "$name" \
             --query "taskDefinition" > current.json
@@ -81,15 +90,23 @@ jobs:
             .taskDefinitionArn, .revision, .status,
             .requiresAttributes, .compatibilities,
             .registeredAt, .registeredBy
-          )' current.json > cleaned.json
+          )' current.json > cleaned-task.json
 
-          echo "task-definition-path=cleaned.json" >> $GITHUB_OUTPUT
+          echo "cleaned-task-definition=cleaned-task.json" >> "$GITHUB_OUTPUT"
+
+          # Validate container name exists in task definition
+          container_name="${{ inputs.container-name }}"
+          found=$(jq -r --arg name "$container_name" '.containerDefinitions[].name' cleaned-task.json | grep -Fx "$container_name" || true)
+          if [[ -z "$found" ]]; then
+            echo "❌ Container '$container_name' not found in task definition."
+            exit 1
+          fi
 
       - name: 🛠 Render Updated Task Definition
         id: render
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          task-definition: ${{ steps.download-task.outputs.task-definition-path }}
+          task-definition: ${{ steps.download-task.outputs.cleaned-task-definition }}
           container-name: ${{ inputs.container-name }}
           image: ${{ steps.ecr-login.outputs.registry }}/${{ inputs.image-name }}:${{ inputs.image-tag }}
 
@@ -107,6 +124,7 @@ jobs:
         run: |
           echo "::notice::----------------------------------------"
           echo "::notice::✅ Deployment Summary"
+          echo "::notice::Time           : $(date -u)"
           echo "::notice::Task Definition: ${{ steps.deploy.outputs.task-definition-arn }}"
           echo "::notice::Service        : ${{ inputs.service-name }}"
           echo "::notice::Cluster        : ${{ inputs.cluster-name }}"
