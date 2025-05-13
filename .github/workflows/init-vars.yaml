@@ -71,7 +71,7 @@ on:
 jobs:
   set:
     timeout-minutes: 5
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     outputs:
       environment: ${{ steps.set-vars.outputs.environment }}
       is-pull-request: ${{ steps.set-vars.outputs.isPullRequest }}
