@@ -83,6 +83,7 @@ jobs:
     name: 📦🚀 Build & Push
     needs: [ initial, scan ]
     if: ${{
+      always() &&
       (needs.initial.outputs.is-build == 'true') &&
       (needs.initial.outputs.ignore-sonar-quality == 'true'|| needs.scan.result == 'skipped' || needs.scan.result == 'success')
       }}
