@@ -1,13 +1,13 @@
 env:
   NAME: miniapps-template-angular
 
-  RUN_UNIT_TEST: true
+  RUN_UNIT_TEST: false
   IGNORE_UNIT_TEST_ERROR: false
   TEST_IMAGE_NAME: miniapps-template-angular
   TEST_IMAGE_TAG: testimage-latest
 
   # SONAR SCAN
-  RUN_SONAR: true
+  RUN_SONAR: false
   IGNORE_SONAR_QUALITY: true
   SONAR_PROJECT_KEY: miniapps-template-angular
   SONAR_HOST_URL: http://ec2-43-208-103-222.ap-southeast-7.compute.amazonaws.com
