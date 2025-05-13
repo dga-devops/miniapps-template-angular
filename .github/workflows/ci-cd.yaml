@@ -22,7 +22,7 @@ permissions:
 jobs:
   initial:
     name: 🔸 Initial
-    uses: ./.github/workflows/init-vars.yaml
+    uses: dga-devops/miniapps-template-angular/.github/workflows/init-vars.yaml@develop
 
 #  test:
 #    name: 🔸 Test
