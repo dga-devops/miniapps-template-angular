@@ -4,7 +4,7 @@ env:
   RUN_UNIT_TEST: true
   IGNORE_UNIT_TEST_ERROR: false
   TEST_IMAGE_NAME: miniapps-template-angular
-  TEST_IMAGE_TAG: testimage-v1.0.0
+  TEST_IMAGE_TAG: testimage-latest
 
   # SONAR SCAN
   RUN_SONAR: true
