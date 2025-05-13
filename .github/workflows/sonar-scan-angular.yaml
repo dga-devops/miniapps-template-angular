@@ -47,6 +47,7 @@ jobs:
       - name: 📂 Check for lcov.info
         id: check-coverage
         run: |
+          ls -al
           if [[ -f coverage/lcov.info ]]; then
             echo "has-coverage=true" >> $GITHUB_OUTPUT
             echo "✅ Found coverage file: coverage/lcov.info"
