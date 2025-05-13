@@ -76,7 +76,6 @@ jobs:
       - name: 📋 Log Inputs
         run: |
           echo "🔹 Is Scan: ${{ needs.initial.outputs.is-scan }}"
-          ehco "🔧 Ignore Sonar Quality Gate : ${{ needs.initial.outputs.ignore-sonar-quality }}"
           echo "Scan Result: ${{ needs.scan.result }}"
         
 
