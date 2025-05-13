@@ -56,8 +56,8 @@ jobs:
       needs.initial.outputs.is-scan == 'true' &&
       (
       needs.initial.outputs.ignore-unit-test-error == 'true' ||
-      contains(fromJson('["skipped","success"]'), needs.test.result || '')
-      ) }}
+      needs.test.result == 'skipped' ||
+      needs.test.result == 'success') }}
     uses: dga-devops/miniapps-template-angular/.github/workflows/sonar-scan-angular.yaml@develop
     with:
       ignore-sonar-quality: ${{ needs.initial.outputs.ignore-sonar-quality == 'true' }}
@@ -76,7 +76,7 @@ jobs:
       - name: 📋 Log Inputs
         run: |
           echo "🔹 Is Scan: ${{ needs.initial.outputs.is-scan }}"
-          echo "Scan Result: ${{ needs.scan.result }}"
+          echo "🔹 Scan Result: ${{ needs.scan.result }}"
         
 
   build-push:
