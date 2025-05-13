@@ -36,6 +36,19 @@ jobs:
       test-image-name: ${{ needs.initial.outputs.test-image-name }}
       test-image-tag: ${{ needs.initial.outputs.test-image-tag }}
 
+  test-debug-result:
+    name: 🔸 Test Debug Result
+    needs: [ initial, test ]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📋 Log Inputs
+        run: |
+          echo "🔹 Is Test: ${{ needs.initial.outputs.is-test }}"
+          echo "🔧 Ignore Unit Test Error : ${{ needs.initial.outputs.ignore-unit-test-error }}"
+          echo "Test Result: ${{ needs.test.result }}"
+          echo "Artifact ID: ${{ needs.test.outputs.artifact-id }}"
+
   scan:
     name: 🔸 Scan
     needs: [ initial, test ]
@@ -53,6 +66,19 @@ jobs:
       source-code-directory: ${{ needs.initial.outputs.sonar-scan-source-code-target }}
     secrets:
       sonar-token: ${{ secrets.SONAR_TOKEN }}
+
+  scan-debug-result:
+    name: 🔸 Scan Debug Result
+    needs: [ initial, test, scan ]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📋 Log Inputs
+        run: |
+          echo "🔹 Is Scan: ${{ needs.initial.outputs.is-scan }}"
+          ehco "🔧 Ignore Sonar Quality Gate : ${{ needs.initial.outputs.ignore-sonar-quality }}"
+          echo "Scan Result: ${{ needs.scan.result }}"
+        
 
   build-push:
     name: 📦🚀 Build & Push
